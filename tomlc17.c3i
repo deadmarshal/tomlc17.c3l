@@ -1,0 +1,96 @@
+module tomlc17;
+
+import std::io;
+
+constset Type @cname("toml_type_t")
+{
+	UNKNOWN,
+	STRING,
+	INT64,
+	FP64,
+	BOOLEAN,
+	DATE,
+	TIME,
+	DATETIME,
+	DATETIMETZ,
+	ARRAY,
+	TABLE
+}
+
+struct Datum @cname("toml_datum_t")
+{
+  Type type;
+  uint flag;
+  CInt lineno;
+  CInt colno;
+  ZString source;
+  union u
+  {
+    ZString s;
+    struct str 
+    {
+      ZString ptr;
+      CInt len;
+    }
+    long int64;
+    double fp64;
+    bool boolean;
+    struct ts 
+    {
+      short year,month,day;
+      short hour,minute,second;
+      int usec;
+      short tz;
+    }
+    struct arr 
+    {
+      CInt size;
+      Datum *elem;
+    }
+    struct tab 
+    {
+      int size;
+      CChar **key;
+      CInt *len;
+      Datum *value;
+    }
+  }
+}
+
+struct Result @cname("toml_result_t")
+{
+  CBool ok;
+  Datum toptab;
+  CChar[200] errmsg;
+  void *__internal;
+}
+
+alias MemRealloc = fn void(void*,usz);
+alias MemFree = fn void(void*);
+
+struct Option
+{
+  CBool check_utf8;
+  MemRealloc mem_realloc;
+  MemFree mem_free;
+}
+
+fn Result parse(ZString src,CInt len) @cname("toml_parse");
+fn Result parse_file(File *fp) @cname("toml_parse_file");
+fn Result parse_file_ex(ZString fname) @cname("toml_parse_file_ex");
+fn Result parse_named(ZString src,
+		      CInt len,
+		      ZString name) @cname("toml_parse_named");
+fn Result parse_file_named(File *fp,
+			   ZString name) @cname("toml_parse_file_named");
+
+fn void free(Result result) @cname("toml_free");
+
+fn Datum get(Datum table,ZString key) @cname("toml_get");
+fn Datum seek(Datum table,ZString multipart_key) @cname("toml_seek");
+fn Result merge(Result *r1,Result *r2) @cname("toml_merge");
+fn CBool equiv(Result *r1,Result *r2) @cname("toml_equiv");
+
+fn Option default_option() @cname("toml_default_option");
+fn void set_option(Option opt) @cname("toml_set_option");
+
